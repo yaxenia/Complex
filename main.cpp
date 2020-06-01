@@ -1,82 +1,224 @@
-// Program to print Vertex Cover of a given undirected graph
-#include<iostream>
-#include <list>
-using namespace std;
+/* red-black tree */
 
-// This class represents a undirected graph using adjacency list
-class Graph
+#include <iostream>
+#include <fstream>
+#include <set>
+
+template<typename T, typename compLT = std::less<T>>
+class RBTree
 {
-    int V;    // No. of vertices
-    list<int> *adj;  // Pointer to an array containing adjacency lists
 public:
-    Graph(int V);  // Constructor
-    void addEdge(int v, int w); // function to add an edge to graph
-    void printVertexCover();  // prints vertex cover
-};
+    /* Red-Black tree */
+    typedef enum { BLACK, RED } nodeColor;
 
-Graph::Graph(int V)
-{
-    this->V = V;
-    adj = new list<int>[V];
-}
-
-void Graph::addEdge(int v, int w)
-{
-    adj[v].push_back(w); // Add w to v’s list.
-    adj[w].push_back(v); // Since the graph is undirected
-}
-
-// The function to print vertex cover
-void Graph::printVertexCover()
-{
-    // Initialize all vertices as not visited.
-    bool visited[V];
-    for (int i=0; i<V; i++)
-        visited[i] = false;
-
-    list<int>::iterator i;
-
-    // Consider all edges one by one
-    for (int u=0; u<V; u++)
+    class Node
     {
-        // An edge is only picked when both visited[u] and visited[v]
-        // are false
-        if (visited[u] == false)
+    public:
+        Node ()
         {
-            // Go through all adjacents of u and pick the first not
-            // yet visited vertex (We are basically picking an edge
-            // (u, v) from remaining edges.
-            for (i= adj[u].begin(); i != adj[u].end(); ++i)
-            {
-                int v = *i;
-                if (visited[v] == false)
-                {
-                    // Add the vertices (u, v) to the result set.
-                    // We make the vertex u and v visited so that
-                    // all edges from/to them would be ignored
-                    visited[v] = true;
-                    visited[u]  = true;
-                    break;
-                }
-            }
         }
+
+        Node (Node *left, Node *right, Node *parent, nodeColor color, T data) :
+                left (left), right (right), parent (parent), color (color), data (data)
+        {
+        }
+
+        Node *left = nullptr;         /* left child */
+        Node *right = nullptr;        /* right child */
+        Node *parent = nullptr;       /* parent */
+        nodeColor color = BLACK;      /* node color (BLACK, RED) */
+        T data;                       /* data stored in node */
+    };
+
+    RBTree ()
+    {
+        NIL = new Node ();
+        NIL->color = BLACK;
+        root = NIL;
     }
 
-    // Print the vertex cover
-    for (int i=0; i<V; i++)
-        if (visited[i])
-            cout << i << " ";
-}
+    void rotateLeft(Node *x)
+    {
 
-// Driver program to test methods of graph class
-int main()
-{
-    // Create a graph given in the above diagram
-    Graph g(4);
-    g.addEdge(2, 1);
+        /**************************
+         *  rotate node x to left *
+         **************************/
+    }
+
+    template<typename T, typename compLT>
+    void RBTree<T, compLT>::rotateRight(Node *x)
+    {
+            Node* y = x->left;
+            x->left = y->right;
+            y->right->parent = x;
+            y->parent = x->parent;
+            if (x->parent)
+            {
+                if (x == x->parent->right)
+                    x->parent->right = y;
+                else
+                    x->parent->left = y;
+            } else
+            {
+                root = y;
+            }
+            y->right = x;
+                x->parent = y;
 
 
-    g.printVertexCover();
 
-    return 0;
-}
+
+    }
+
+    void insertFixup(Node *x)
+    {
+        while (x != root)
+        {
+            Node *y = nullptr;
+            if (x->parent == x->parent->parent->left)
+            {
+                y = x->parent->parent->right;
+            } else
+            {
+                y = x->parent->parent->left;
+            }
+            if (y->color == RED)
+                {
+                    y->color = BLACK;
+                    x->parent->color = BLACK;
+                    x->parent->parent->color = RED;
+                }
+            if (x == x->parent->right)
+            {
+              x = x->parent;
+              rotateLeft(x);
+              x->parent->color = BLACK;
+              x->parent->parent->color = RED;
+              rotateRight(x->parent->parent);
+            }
+            if (x == x->parent->left)
+            {
+
+               x = x->parent;
+               rotateRight(x);
+               x->parent->color = BLACK;
+                x->parent->parent->color = RED;
+                rotateLeft(x->parent->parent);
+            }
+            x = x->parent->parent;
+         }
+
+        root->color = BLACK;
+    }
+
+    Node *insertNode(T data)
+    {
+        Node *current, *parent, *x;
+
+        /***********************************************
+         *  allocate node for data and insert in tree  *
+         ***********************************************/
+
+        /* find where node belongs */
+        current = root;
+        parent = 0;
+        while (current != NIL)
+        {
+            if (data == current->data)
+                return (current);
+
+            parent = current;
+            current = comp(data, current->data) ? current->left : current->right;
+        }
+
+        /* setup new node */
+        x = new Node (NIL, NIL, parent, RED, data);
+
+        /* insert node in tree */
+        if(parent)
+        {
+            if(comp(data, parent->data))
+                parent->left = x;
+            else
+                parent->right = x;
+        }
+        else
+        {
+            root = x;
+        }
+
+        insertFixup(x);
+        return x;
+    }
+
+    Node *findNode(T data)
+    {
+        /*******************************
+         *  find node containing data  *
+         *******************************/
+
+        Node *current = root;
+        while(current != NIL)
+            if(data == current->data)
+                return current;
+            else
+                current = comp (data, current->data) ?
+                          current->left : current->right;
+        return nullptr;
+    }
+
+    void free(Node *node)
+    {
+        if (node == NIL)
+            return;
+        free (node->left);
+        free (node->right);
+        delete node;
+    }
+
+    ~RBTree ()
+    {
+        free (root);
+        delete NIL;
+    }
+
+
+    void save_tree_in_graphviz_format (std::string filename)
+    {
+        std::ofstream os (filename);
+        os << "digraph {";
+        std::string vertices;
+        std::string edges;
+        save_tree_in_graphviz_format_call (root, vertices, edges);
+        os << vertices << edges << "}";
+    }
+
+private:
+
+    void save_tree_in_graphviz_format_call (Node *node, std::string &vertices, std::string &edges)
+    {
+        if (node == NIL)
+            return;
+
+        if (node->color == RED)
+        {
+            vertices += " " + std::to_string( node->data) + "[color=red];";
+        }
+
+        if (node->parent)
+        {
+            std::string angle = node->parent->left == node ? "sw" : "se";
+            edges += std::to_string( node->parent->data) + ":" + angle + " ->" + std::to_string( node->data) + ";";
+        }
+
+
+        save_tree_in_graphviz_format_call (node->left, vertices, edges);
+        save_tree_in_graphviz_format_call (node->right, vertices, edges);
+
+    }
+
+
+    Node *NIL;                /* NIL element of the tree */
+    Node *root;               /* root of Red-Black tree */
+    compLT comp;
+};
